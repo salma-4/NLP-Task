@@ -5,6 +5,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize, sent_tokenize
+import spacy
 
 # Download NLTK resources if not already downloaded
 # nltk.download('punkt')
@@ -14,10 +15,14 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 # nltk.download('maxent_ne_chunker')
 # nltk.download('words')
 
+# Load the English model for spaCy
+nlp = spacy.load("en_core_web_sm")
 
-dataNltk = pd.read_csv('twitter_validation.csv')
+# Read the data
+data = pd.read_csv('twitter_validation.csv')
+
 # Rename the tweet column
-dataNltk.rename(columns={'I mentioned on Facebook that I was struggling for motivation to go for a run the other day, which has been translated by Tom’s great auntie as ‘Hayley can’t get out of bed’ and told to his grandma, who now thinks I’m a lazy, terrible person 🤣': 'tweet'}, inplace=True)
+data.rename(columns={'I mentioned on Facebook that I was struggling for motivation to go for a run the other day, which has been translated by Tom’s great auntie as ‘Hayley can’t get out of bed’ and told to his grandma, who now thinks I’m a lazy, terrible person 🤣': 'tweet'}, inplace=True)
 
 def remove_punctuations(text):
     return text.translate(str.maketrans('', '', string.punctuation))
@@ -62,65 +67,55 @@ def named_entity_recognition(text):
         ner_tags.append(nltk.ne_chunk(tagged_words))
     return ner_tags
 
-# Preprocess the text
-dataNltk['clean_text'] = dataNltk['tweet'].apply(lambda x: x.lower())
-dataNltk['clean_text'] = dataNltk['clean_text'].apply(remove_punctuations)
-dataNltk['clean_text'] = dataNltk['clean_text'].apply(remove_special_characters)
-dataNltk['clean_text'] = dataNltk['clean_text'].apply(remove_stopwords)
-dataNltk['clean_text'] = dataNltk['clean_text'].apply(stem_words)
-dataNltk['clean_text'] = dataNltk['clean_text'].apply(lemmatize_words)
-dataNltk['pos_tagging'] = dataNltk['clean_text'].apply(pos_tagging)
-dataNltk['chunking'] = dataNltk['clean_text'].apply(chunking)
-dataNltk['named_entity_recognition'] = dataNltk['clean_text'].apply(named_entity_recognition)
+def spacy_tokenize(text):
+    doc = nlp(text)
+    return [token.text for token in doc]
 
-print("---------------------------------------- nltk preprocessing-------------------------------------------------------")
-print(dataNltk.head())
-
-
-import spacy
-import pandas as pd
-import string
-import re
-# Load the English model
-nlp = spacy.load("en_core_web_sm")
-
-dataSpacy = pd.read_csv('twitter_validation.csv')
-
-# Rename the tweet column
-dataSpacy.rename(columns={'I mentioned on Facebook that I was struggling for motivation to go for a run the other day, which has been translated by Tom’s great auntie as ‘Hayley can’t get out of bed’ and told to his grandma, who now thinks I’m a lazy, terrible person 🤣': 'tweet'}, inplace=True)
-
-def remove_punctuations(text):
+def spacy_remove_punctuations(text):
     return text.translate(str.maketrans('', '', string.punctuation))
 
-def remove_special_characters(text):
-    text = re.sub('[^a-zA-Z0-9]', ' ', text)
-    text = re.sub('\s+', ' ', text)
-    return text
-
-def remove_stopwords(text):
+def spacy_remove_stopwords(text):
     doc = nlp(text)
     return " ".join([token.text for token in doc if not token.is_stop])
 
-def lemmatize_words(text):
+def spacy_lemmatize_words(text):
     doc = nlp(text)
     return " ".join([token.lemma_ for token in doc])
 
-def pos_tagging(text):
+def spacy_pos_tagging(text):
     doc = nlp(text)
     return [(token.text, token.pos_) for token in doc]
 
-def named_entity_recognition(text):
+def spacy_named_entity_recognition(text):
     doc = nlp(text)
     return [(ent.text, ent.label_) for ent in doc.ents]
 
-# Preprocess the text
-dataSpacy['clean_text'] = dataSpacy['tweet'].apply(lambda x: x.lower())
-dataSpacy['clean_text'] = dataSpacy['clean_text'].apply(remove_punctuations)
-dataSpacy['clean_text'] = dataSpacy['clean_text'].apply(remove_special_characters)
-dataSpacy['clean_text'] = dataSpacy['clean_text'].apply(remove_stopwords)
-dataSpacy['clean_text'] = dataSpacy['clean_text'].apply(lemmatize_words)
-dataSpacy['pos_tagging'] = dataSpacy['clean_text'].apply(pos_tagging)
-dataSpacy['named_entity_recognition'] = dataSpacy['clean_text'].apply(named_entity_recognition)
+# Apply preprocessing functions using NLTK
+data['clean_text_nltk'] = data['tweet'].apply(lambda x: x.lower())
+data['clean_text_nltk'] = data['clean_text_nltk'].apply(remove_punctuations)
+data['clean_text_nltk'] = data['clean_text_nltk'].apply(remove_special_characters)
+data['clean_text_nltk'] = data['clean_text_nltk'].apply(remove_stopwords)
+data['clean_text_nltk'] = data['clean_text_nltk'].apply(stem_words)
+data['clean_text_nltk'] = data['clean_text_nltk'].apply(lemmatize_words)
+data['tokens_nltk'] = data['tweet'].apply(word_tokenize)  # Tokenize using NLTK
+data['pos_tagging_nltk'] = data['clean_text_nltk'].apply(pos_tagging)
+data['chunking_nltk'] = data['clean_text_nltk'].apply(chunking)
+data['named_entity_recognition_nltk'] = data['clean_text_nltk'].apply(named_entity_recognition)
 
-print("----------------------------------------spacy preprocessing-------------------------------------------------------")
-print(dataSpacy.head())
+# Apply preprocessing functions using spaCy
+data['clean_text_spacy'] = data['tweet'].apply(lambda x: x.lower())
+data['tokens_spacy'] = data['clean_text_spacy'].apply(spacy_tokenize)
+data['clean_text_spacy'] = data['clean_text_spacy'].apply(spacy_remove_punctuations)
+data['clean_text_spacy'] = data['clean_text_spacy'].apply(remove_special_characters)
+data['clean_text_spacy'] = data['clean_text_spacy'].apply(spacy_remove_stopwords)
+data['clean_text_spacy'] = data['clean_text_spacy'].apply(spacy_lemmatize_words)
+data['pos_tagging_spacy'] = data['clean_text_spacy'].apply(spacy_pos_tagging)
+data['named_entity_recognition_spacy'] = data['clean_text_spacy'].apply(spacy_named_entity_recognition)
+
+print("---------------------------------------- nltk preprocessing-------------------------------------------------------")
+#print(data[['tweet', 'clean_text_nltk', 'tokens_nltk', 'pos_tagging_nltk', 'chunking_nltk', 'named_entity_recognition_nltk']])
+print(data[['tweet', 'named_entity_recognition_nltk']])
+
+print("---------------------------------------- spacy preprocessing-------------------------------------------------------")
+#print(data[['tweet', 'clean_text_spacy', 'tokens_spacy', 'pos_tagging_spacy', 'named_entity_recognition_spacy']])
+print(data[['tweet', 'named_entity_recognition_spacy']])
