@@ -4,7 +4,11 @@ import re
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
-
+from nltk.tokenize import word_tokenize
+#
+# nltk.download('punkt')
+# nltk.download('averaged_perceptron_tagger')
+#
 
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
@@ -38,7 +42,16 @@ def lemmatize_words(text):
     lemmatizer = WordNetLemmatizer()
     return " ".join([lemmatizer.lemmatize(word) for word in text.split()])
 
-# Apply preprocessing functions using NLTK
+def pos_tagging(text):
+    # Tokenize the text
+    tokens = word_tokenize(text)
+    # Perform POS tagging
+    tagged_tokens = nltk.pos_tag(tokens)
+    # Join the tagged tokens back into a string
+    return " ".join([tag[1] for tag in tagged_tokens])
+
+
+# # Apply preprocessing functions using NLTK
 
 data['clean_text_nltk'] = data['review'].apply(lambda x: x.lower())
 data['clean_text_nltk'] = data['clean_text_nltk'].apply(remove_punctuations)
@@ -46,7 +59,8 @@ data['clean_text_nltk'] = data['clean_text_nltk'].apply(remove_special_character
 data['clean_text_nltk'] = data['clean_text_nltk'].apply(remove_stopwords)
 data['clean_text_nltk'] = data['clean_text_nltk'].apply(stem_words)
 data['clean_text_nltk'] = data['clean_text_nltk'].apply(lemmatize_words)
-
+data['pos_tagging'] = data['clean_text_nltk'].apply(pos_tagging)
+print(data['pos_tagging'])
 print("---------------------------------------- nltk preprocessing-------------------------------------------------------")
 print(data[['review', 'clean_text_nltk']])
 
