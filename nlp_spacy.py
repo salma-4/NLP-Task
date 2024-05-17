@@ -6,6 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report
+from spacy.matcher import Matcher
 
 # Load spaCy model
 nlp = spacy.load("en_core_web_sm")
@@ -64,6 +65,24 @@ def apply_chunking(text):
             chunks.append(' '.join(chunk))  # Add chunk to list
     return chunks
 
+# Initialize the Matcher
+matcher = Matcher(nlp.vocab)
+
+# Define your rule-based matching patterns
+patterns = [{"POS": "PROPN"}]
+
+# Add patterns to the Matcher
+for pattern in patterns:
+    matcher.add("PROPER_NOUN", [patterns])
+
+# Define a function to apply rule-based matching
+def apply_rule_based_matching(text):
+    doc = nlp(text)
+    # Apply the Matcher to the processed text
+    matches = matcher(doc)
+    # Extract matched spans and return them
+    return [doc[start:end].text for match_id, start, end in matches]
+
 # Apply preprocessing functions using spaCy
 data['clean_text_spacy'] = data['review'].apply(lambda x: x.lower())
 data['tokens_spacy'] = data['clean_text_spacy'].apply(spacy_tokenize)
@@ -71,7 +90,6 @@ data['clean_text_spacy'] = data['clean_text_spacy'].apply(spacy_remove_punctuati
 data['clean_text_spacy'] = data['clean_text_spacy'].apply(remove_special_characters)
 data['clean_text_spacy'] = data['clean_text_spacy'].apply(spacy_remove_stopwords)
 data['clean_text_spacy'] = data['clean_text_spacy'].apply(spacy_lemmatize_words)
-########################################################################################
 data['ner_spacy'] = data['clean_text_spacy'].apply(spacy_ner)
 data['dependency_parse'] = data['clean_text_spacy'].apply(spacy_dependency_parse)
 data['pos_tags_spacy'] = data['clean_text_spacy'].apply(spacy_pos_tagging)
